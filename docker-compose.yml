@@ -1,0 +1,47 @@
+services:
+  personen-mock:
+    # from https://github.com/BRP-API/Haal-Centraal-BRP-bevragen/blob/master/docker-compose-mock.yml
+    container_name: personen-mock
+    image: ghcr.io/brp-api/personen-mock:2.2.1-latest
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Release
+      - ASPNETCORE_URLS=http://+:5010
+    ports:
+      - "5010:5010"
+    # volumes:
+    #   - ./src/config/BrpService:/app/Data
+
+  web:
+    build:
+      context: src/
+      args:
+        PIP_REQUIREMENTS: requirements_dev.txt
+    ports:
+      - "8095:8000"
+    links:
+      - personen-mock
+    depends_on:
+      - personen-mock
+    environment:
+      UWSGI_HTTP_SOCKET: ":8000"
+      UWSGI_MODULE: "haal_centraal_proxy.wsgi"
+      UWSGI_CALLABLE: "application"
+      UWSGI_MASTER: 1
+      UWSGI_STATIC_MAP: "/haal_centraal_proxy/static=/static"
+      SECRET_KEY: insecure
+      #DATABASE_URL: "${DATABASE_URL:-postgresql://postgres:insecure@database/dataservices}"
+      DJANGO_LOG_LEVEL: "${DJANGO_LOG_LEVEL:-INFO}"
+      HAAL_CENTRAAL_PROXY_LOG_LEVEL: "${HAAL_CENTRAAL_PROXY_LOG_LEVEL:-INFO}"
+      HAAL_CENTRAAL_PROXY_AUDIT_LOG_LEVEL: "${HAAL_CENTRAAL_PROXY_AUDIT_LOG_LEVEL:-INFO}"
+      AZURE_APPI_AUDIT_CONNECTION_STRING: "${AZURE_APPI_AUDIT_CONNECTION_STRING}"
+      AZURE_APPI_CONNECTION_STRING: "${AZURE_APPI_CONNECTION_STRING}"
+      OAUTH_CLIENT_ID: "${OAUTH_CLIENT_ID}"
+      OAUTH_JWKS_URL: "${OAUTH_JWKS_URL}"
+      PUB_JWKS: "$(cat src/jwks_test.json)"
+      OAUTH_URL:  "${OAUTH_URL}"
+      CLOUD_ENV: "${CLOUD_ENV}"
+      DATAPUNT_API_URL: "${DATAPUNT_API_URL}"
+      DJANGO_DEBUG: 1
+    volumes:
+      - ./src:/app
+    command: uwsgi --py-auto-reload=1 --enable-threads --lazy-apps --buffer-size=65535
