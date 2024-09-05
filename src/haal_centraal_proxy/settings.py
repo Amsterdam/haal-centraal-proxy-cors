@@ -259,6 +259,7 @@ HEALTH_CHECKS = {
 HEALTH_CHECKS_ERROR_CODE = 503
 
 REST_FRAMEWORK = dict(
+    EXCEPTION_HANDLER="haal_centraal_proxy.views.exception_handler",
     UNAUTHENTICATED_USER=None,  # Avoid importing django.contrib.auth.models
     UNAUTHENTICATED_TOKEN=None,
     URL_FORMAT_OVERRIDE="_format",  # use ?_format=.. instead of ?format=..

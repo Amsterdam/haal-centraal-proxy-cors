@@ -4,10 +4,9 @@ from django.urls import include, path
 
 from . import views
 
-# TODO:
-# handler400 = views.bad_request
-# handler404 = views.not_found
-# handler500 = views.server_error
+handler400 = views.bad_request
+handler404 = views.not_found
+handler500 = views.server_error
 
 urlpatterns = [
     path("<dataset>/<tabel>/", views.ProxyAPIView.as_view()),
