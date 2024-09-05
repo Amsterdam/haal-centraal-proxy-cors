@@ -25,6 +25,16 @@ Run docker compose:
 
 Navigate to `localhost:8095`.
 
+The mock API uses the following data file: https://github.com/BRP-API/Haal-Centraal-BRP-bevragen/blob/master/src/config/BrpService/test-data.json
+
+Example request (directly to the Haal Centraal Mock API)::
+
+    curl -X POST http://localhost:5010/haalcentraal/api/brp/personen -H 'Content-Type: application/json' -d '{"type": "ZoekMetPostcodeEnHuisnummer", "postcode": "1074VE", "huisnummer": 1, "fields": ["naam"]}'
+
+And the same can be repeated on the Django instance:
+
+    curl -X POST http://localhost:8095/api/brp/personen -H 'Content-Type: application/json' -d '{"type": "ZoekMetPostcodeEnHuisnummer", "postcode": "1074VE", "huisnummer": 1, "fields": ["naam"]}'
+
 ## Using Local Python
 
 Create a virtualenv:
@@ -44,6 +54,7 @@ Install all packages in it:
 Start the Django application:
 ```
     export PUB_JWKS="$(cat jwks_test.json)"
+    export HAAL_CENTRAAL_BRP_URL="http://localhost:5010/haalcentraal/api/brp/personen"
     export DJANGO_DEBUG=true
 
     ./manage.py runserver localhost:8000

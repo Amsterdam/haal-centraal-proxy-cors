@@ -277,3 +277,17 @@ DATAPUNT_AUTHZ = {
 }
 
 # -- Local app settings
+
+if _USE_SECRET_STORE or CLOUD_ENV.startswith("azure"):
+    HAAL_CENTRAAL_API_KEY = Path("/mnt/secrets-store/haal-centraal-proxy-key").read_text()
+else:
+    HAAL_CENTRAAL_API_KEY = env.str("HAAL_CENTRAAL_API_KEY", "")
+
+# mTLS client certificate for Haal Centraal BRK.
+HAAL_CENTRAAL_KEYFILE = env.str("HC_KEYFILE", None)
+HAAL_CENTRAAL_CERTFILE = env.str("HC_CERTFILE", None)
+
+HAAL_CENTRAAL_BRP_URL = env.str(
+    "HAAL_CENTRAAL_BRP_URL",
+    "https://proefomgeving.haalcentraal.nl/haalcentraal/api/brp/personen",
+)
