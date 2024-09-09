@@ -87,6 +87,8 @@ Deployment:
 
 # Developer Notes
 
+Run `make` in the `src` folder to have an help-overview of all common developer tasks.
+
 ## Package Management
 
 The packages are managed with *pip-compile*.
