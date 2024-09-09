@@ -65,8 +65,8 @@ export DJANGO_DEBUG=true
 The following environment variables are useful for configuring a local development environment:
 
 * `DJANGO_DEBUG` to enable debugging (true/false).
-* `HAAL_CENTRAAL_PROXY_LOG_LEVEL` log level for application code.
-* `HAAL_CENTRAAL_PROXY_AUDIT_LOG_LEVEL` log level for audit messages (default is `INFO`).
+* `LOG_LEVEL` log level for application code.
+* `AUDIT_LOG_LEVEL` log level for audit messages (default is `INFO`).
 
 Connections:
 

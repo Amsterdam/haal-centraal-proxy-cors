@@ -132,10 +132,8 @@ _json_log_formatter = {
 }
 
 DJANGO_LOG_LEVEL = env.str("DJANGO_LOG_LEVEL", "INFO")
-HAAL_CENTRAAL_PROXY_LOG_LEVEL = env.str(
-    "HAAL_CENTRAAL_PROXY_LOG_LEVEL", "DEBUG" if DEBUG else "INFO"
-)
-HAAL_CENTRAAL_PROXY_AUDIT_LOG_LEVEL = env.str("HAAL_CENTRAAL_PROXY_AUDIT_LOG_LEVEL", "INFO")
+LOG_LEVEL = env.str("LOG_LEVEL", "DEBUG" if DEBUG else "INFO")
+AUDIT_LOG_LEVEL = env.str("AUDIT_LOG_LEVEL", "INFO")
 
 LOGGING = {
     "version": 1,
@@ -173,17 +171,17 @@ LOGGING = {
         "django.utils.autoreload": {"handlers": ["console"], "level": "INFO", "propagate": False},
         "haal_centraal_proxy": {
             "handlers": ["console"],
-            "level": HAAL_CENTRAAL_PROXY_LOG_LEVEL,
+            "level": LOG_LEVEL,
             "propagate": False,
         },
         "haal_centraal_proxy.audit": {
             "handlers": ["audit_console"],
-            "level": HAAL_CENTRAAL_PROXY_AUDIT_LOG_LEVEL,
+            "level": AUDIT_LOG_LEVEL,
             "propagate": False,
         },
         "authorization_django": {
             "handlers": ["audit_console"],
-            "level": HAAL_CENTRAAL_PROXY_AUDIT_LOG_LEVEL,
+            "level": AUDIT_LOG_LEVEL,
             "propagate": False,
         },
         "apikeyclient": {"handlers": ["console"], "propagate": False},
