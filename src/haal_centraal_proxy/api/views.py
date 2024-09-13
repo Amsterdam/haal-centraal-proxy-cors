@@ -8,8 +8,8 @@ from django.urls import reverse
 from rest_framework.request import Request
 from rest_framework.views import APIView
 
+from . import permissions
 from .client import HaalCentraalClient
-from .permissions import IsUserScope
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ class ScopeCheckAPIView(APIView):
         if not self.needed_scopes:
             raise ImproperlyConfigured("needed_scopes is not set")
 
-        return super().get_permissions() + [IsUserScope(self.needed_scopes)]
+        return super().get_permissions() + [permissions.IsUserScope(self.needed_scopes)]
 
 
 class HaalCentraalBRP(ScopeCheckAPIView):
@@ -40,15 +40,6 @@ class HaalCentraalBRP(ScopeCheckAPIView):
     # Require extra scopes
     needed_scopes = {"BRP/RO"}
 
-    # Constants for Haal Centraal
-    FIELDS_PERSOON_BASIS = {"burgerservicenummer", "geboorte", "leeftijd"}
-    FIELDS_KINDEREN = {"burgerservicenummer", "kinderen"}
-    FIELDS_NAAM = {"burgerservicenummer", "naam"}
-
-    PARAMETER_GEMEENTE_VAN_INSCHRIJVING = "gemeenteVanInschrijving"
-    PARAMETER_INCLUSIEF_OVERLEDENEN = "inclusiefOverledenPersonen"
-    GEMEENTE_AMSTERDAM_CODE = "0363"
-
     def __init__(self):
         super().__init__()
         # Initialize the client once, so it has a global HTTP connection pool.
@@ -58,14 +49,15 @@ class HaalCentraalBRP(ScopeCheckAPIView):
             cert_file=settings.HAAL_CENTRAAL_CERTFILE,
             key_file=settings.HAAL_CENTRAAL_KEYFILE,
         )
-        self._base_url = reverse("brp-proxy")
+        self._base_url = reverse("brp-personen")
 
     def post(self, request: Request, *args, **kwargs):
         """Handle the incoming POST request.
         Basic checks (such as content-type validation) are already done by REST Framework.
+        The BRP API uses POST so the logs won't iclude personally identifiable information (PII).
         """
         # Proxy to Haal Centraal
-        hc_request = self._adjust_request(request.data)
+        hc_request = permissions.transform_request(request.data, set(request.get_token_scopes))
         response = self.client.call(hc_request)
 
         # Rewrite the response to pagination still works.
@@ -79,12 +71,6 @@ class HaalCentraalBRP(ScopeCheckAPIView):
             orjson.dumps(response.data),
             content_type=response.headers.get("Content-Type"),
         )
-
-    def _adjust_request(self, data):
-        """Adjust the request to Haal Centraal.
-        This will add extra search parameters so enforce restrictions based on the user profile.
-        """
-        return data
 
 
 def _rewrite_links(

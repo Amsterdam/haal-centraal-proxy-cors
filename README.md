@@ -33,7 +33,7 @@ Example request (directly to the Haal Centraal Mock API):
 
 And the same can be repeated on the Django instance if you pass a token:
 
-    curl -X POST http://localhost:8000/api/brp/personen -H 'Content-Type: application/json' -H "Authorization: Bearer $(./get-token.py BRP/RO)" -d '{"type": "ZoekMetPostcodeEnHuisnummer", "postcode": "1074VE", "huisnummer": 1, "fields": ["naam"]}'
+    curl -X POST http://localhost:8000/api/brp/personen -H 'Content-Type: application/json' -H "Authorization: Bearer $(./get-token.py BRP/RO BRP/zoek-postcode)" -d '{"type": "ZoekMetPostcodeEnHuisnummer", "postcode": "1074VE", "huisnummer": 1, "fields": ["naam"]}'
 
 ## Using Local Python
 
