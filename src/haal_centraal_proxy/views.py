@@ -6,11 +6,15 @@ from rest_framework import status
 from rest_framework.exceptions import APIException, ErrorDetail
 from rest_framework.views import exception_handler as drf_exception_handler
 
-from haal_centraal_proxy.api.exceptions import RemoteAPIException
+from haal_centraal_proxy.api.exceptions import ProblemJsonException
 
-RFC_400_BAD_REQUEST = "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.1"
-RFC_404_NOT_FOUND = "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.4"
-RFC_500_SERVER_ERROR = "https://datatracker.ietf.org/doc/html/rfc7231#section-6.6.1"
+STATUS_TO_URI = {
+    status.HTTP_400_BAD_REQUEST: "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.1",
+    status.HTTP_403_FORBIDDEN: "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.3",
+    status.HTTP_404_NOT_FOUND: "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.4",
+    status.HTTP_405_METHOD_NOT_ALLOWED: "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.5",
+    status.HTTP_500_INTERNAL_SERVER_ERROR: "https://datatracker.ietf.org/doc/html/rfc7231#section-6.6.1",
+}
 
 
 class RootView(View):
@@ -40,16 +44,17 @@ def exception_handler(exc, context):
     # so it remains text/html for the browsable API. It would break browsing otherwise.
     response.content_type = "application/problem+json"
 
-    if isinstance(exc, RemoteAPIException):
+    if isinstance(exc, ProblemJsonException):
         # Raw problem json response forwarded.
         # Normalize the problem+json fields to be identical to how
         # our own API's would return these.
         normalized_fields = {
-            "type": f"urn:apiexception:{exc.code}",
-            "code": str(exc.code),
-            "title": str(exc.default_detail),
+            "type": STATUS_TO_URI[exc.status_code],
+            "title": str(exc.title),
             "status": int(exc.status_code),
-            "instance": request.build_absolute_uri() if request else None,
+            "detail": str(exc.detail),
+            "code": str(exc.code),
+            "instance": request.path if request else None,
         }
         # This merge strategy puts the normal fields first:
         response.data = normalized_fields | response.data
@@ -60,10 +65,12 @@ def exception_handler(exc, context):
         detail: ErrorDetail = response.data["detail"]
         default_detail = getattr(exc, "default_detail", None)
         response.data = {
-            "type": f"urn:apiexception:{detail.code}",
+            "type": STATUS_TO_URI[exc.status_code],
+            "code": detail.code,
             "title": default_detail if default_detail else str(exc),
             "detail": str(detail) if detail != default_detail else "",
             "status": response.status_code,
+            "instance": request.path if request else None,
         }
     else:
         # Unknown exception format, pass native JSON what DRF has generated. Make sure
@@ -92,7 +99,7 @@ def server_error(request, *args, **kwargs):
         )
 
     data = {
-        "type": RFC_500_SERVER_ERROR,
+        "type": STATUS_TO_URI[500],
         "title": "Server Error (500)",
         "detail": "",
         "status": status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -106,7 +113,7 @@ def bad_request(request, exception, *args, **kwargs):
     Generic 400 error handler.
     """
     data = {
-        "type": RFC_400_BAD_REQUEST,
+        "type": STATUS_TO_URI[status.HTTP_400_BAD_REQUEST],
         "title": "Bad Request (400)",
         "detail": "",
         "status": status.HTTP_400_BAD_REQUEST,
@@ -120,7 +127,7 @@ def not_found(request, exception, *args, **kwargs):
     Generic 404 error handler.
     """
     data = {
-        "type": RFC_404_NOT_FOUND,
+        "type": STATUS_TO_URI[status.HTTP_404_NOT_FOUND],
         "title": "Not Found (404)",
         "detail": "",
         "status": status.HTTP_404_NOT_FOUND,

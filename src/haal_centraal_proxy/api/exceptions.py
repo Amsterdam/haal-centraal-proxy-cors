@@ -28,11 +28,19 @@ class GatewayTimeout(APIException):
     default_code = "gateway_timeout"
 
 
-class RemoteAPIException(APIException):
-    """Indicate that a call to a remote endpoint failed."""
+class ProblemJsonException(APIException):
+    """API exception that dictates exactly
+    how the application/problem+json response looks like.
+    """
 
-    def __init__(self, title, detail, code, status_code):
+    status_code = status.HTTP_400_BAD_REQUEST
+
+    def __init__(self, title, detail, code, status=status.HTTP_400_BAD_REQUEST):
         super().__init__(detail, code)
         self.code = code or self.default_code
-        self.default_detail = title
-        self.status_code = status_code
+        self.title = title
+        self.status_code = status
+
+
+class RemoteAPIException(ProblemJsonException):
+    """Indicate that a call to a remote endpoint failed."""
