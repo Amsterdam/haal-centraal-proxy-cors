@@ -95,10 +95,11 @@ class HaalCentraalClient:
         level = logging.ERROR if response.status >= 400 else logging.INFO
         logger.log(
             level,
-            "Proxy call to %s, status %s: %s, took: %.3fs",
+            "Proxy call to %s, status %s: %s (%s), took: %.3fs",
             self._host,
             response.status,
             response.reason,
+            response.headers.get("content-type"),
             (time.perf_counter_ns() - t0) * 1e-9,
         )
 
@@ -134,30 +135,31 @@ class HaalCentraalClient:
             response.data.decode() if not content_type.startswith("text/html") else None
         )
 
-        if 300 <= response.status <= 399 and (
-            "/oauth/authorize" in response.headers.get("Location", "")
-        ):
-            raise PermissionDenied("Invalid token")
-        elif response.status == status.HTTP_400_BAD_REQUEST:
-            if content_type == "application/problem+json":
+        if response.status == status.HTTP_400_BAD_REQUEST:
+            if content_type in ("application/json", "application/problem+json"):
                 # Translate proper "Bad Request" to REST response
                 return RemoteAPIException(
                     title=ParseError.default_detail,
                     detail=orjson.loads(response.data),
                     code=ParseError.default_code,
-                    status_code=400,
+                    status=400,
                 )
             else:
                 return BadGateway(detail_message)
         elif response.status in (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN):
-            # We translate 401 to 403 because 401 MUST have a WWW-Authenticate
-            # header in the response and we can't easily set that from here.
-            # Also, RFC 7235 says we MUST NOT change such a header,
-            # which presumably includes making one up.
+            # We translate 401 to 403 because 401 MUST have a WWW-Authenticate header in the
+            # response, and we can't easily set that from here. Also, RFC 7235 says we MUST NOT
+            # change such a header, which presumably includes making one up.
+            if content_type in ("application/json", "application/problem+json"):
+                remote_json = orjson.loads(response.data)
+                remote_detail = remote_json.get("title", "")
+            else:
+                remote_detail = repr(response.data)
+
             return RemoteAPIException(
                 title=PermissionDenied.default_detail,
-                detail=f"{response.status} from remote: {response.data!r}",
-                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"{response.status} from remote: {remote_detail}",
+                status=status.HTTP_403_FORBIDDEN,
                 code=PermissionDenied.default_code,
             )
         elif response.status == status.HTTP_404_NOT_FOUND:
@@ -167,7 +169,7 @@ class HaalCentraalClient:
                 return RemoteAPIException(
                     title=NotFound.default_detail,
                     detail=orjson.loads(response.data),
-                    status_code=404,
+                    status=404,
                     code=NotFound.default_code,
                 )
             return NotFound(detail_message)

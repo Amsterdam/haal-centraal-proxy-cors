@@ -60,3 +60,43 @@ class TestViews:
         )
         assert response.status_code == 200
         assert response.json() == RESPONSE_POSTCODE_HUISNUMMER
+
+    def test_invalid_api_key(self, api_client, urllib3_mocker):
+        """Prove that incorrect API-key settings are handled gracefully."""
+        url = reverse("brp-personen")
+        token = build_jwt_token(["BRP/RO", "BRP/zoek-postcode"])
+        urllib3_mocker.add(
+            "POST",
+            "/haalcentraal/api/brp/personen",
+            body=orjson.dumps(
+                {
+                    "type": "https://datatracker.ietf.org/doc/html/rfc7235#section-3.1",
+                    "title": "Niet correct geauthenticeerd.",
+                    "status": 401,
+                    "instance": "/haalcentraal/api/brp/personen",
+                    "code": "authentication",
+                }
+            ),
+            status=401,
+            content_type="application/json",
+        )
+
+        response = api_client.post(
+            url,
+            {
+                "type": "ZoekMetPostcodeEnHuisnummer",
+                "postcode": "1074VE",
+                "huisnummer": 1,
+                "fields": ["naam"],
+            },
+            HTTP_AUTHORIZATION=f"Bearer {token}",
+        )
+        assert response.status_code == 403
+        assert response.json() == {
+            "type": "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.3",
+            "title": "You do not have permission to perform this action.",
+            "status": 403,
+            "detail": "401 from remote: Niet correct geauthenticeerd.",
+            "code": "permission_denied",
+            "instance": "/api/brp/personen",
+        }
