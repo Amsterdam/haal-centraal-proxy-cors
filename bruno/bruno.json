@@ -1,0 +1,14 @@
+{
+  "version": "1",
+  "name": "Amsterdam",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ],
+  "scripts": {
+    "moduleWhitelist": [
+      "crypto"
+    ]
+  }
+}
