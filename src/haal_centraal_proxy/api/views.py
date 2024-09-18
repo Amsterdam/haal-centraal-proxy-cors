@@ -46,8 +46,8 @@ class HaalCentraalBRP(ScopeCheckAPIView):
         self.client = HaalCentraalClient(
             endpoint_url=settings.HAAL_CENTRAAL_BRP_URL,
             api_key=settings.HAAL_CENTRAAL_API_KEY,
-            cert_file=settings.HAAL_CENTRAAL_CERTFILE,
-            key_file=settings.HAAL_CENTRAAL_KEYFILE,
+            cert_file=settings.HAAL_CENTRAAL_CERT_FILE,
+            key_file=settings.HAAL_CENTRAAL_KEY_FILE,
         )
         self._base_url = reverse("brp-personen")
 

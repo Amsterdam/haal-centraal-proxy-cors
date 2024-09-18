@@ -72,8 +72,8 @@ Connections:
 
 * `HAAL_CENTRAAL_BRP_URL` endpoint for the Haal Centraal BRP API.
 * `HAAL_CENTRAAL_API_KEY` the API key for Haal Centraal
-* `HC_CERTFILE` the mTLS certificate for Haal Centraal.
-* `HC_KEYFILE` the mTLS key file for Haal Centraal.
+* `HAAL_CENTRAAL_CERT_FILE` the mTLS certificate for Haal Centraal.
+* `HAAL_CENTRAAL_KEY_FILE` the mTLS key file for Haal Centraal.
 
 Deployment:
 
