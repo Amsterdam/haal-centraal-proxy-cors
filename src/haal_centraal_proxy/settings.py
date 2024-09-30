@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import environ
-from opencensus.trace import config_integration
 from pythonjsonlogger import jsonlogger
 
 env = environ.Env()
@@ -162,11 +161,10 @@ LOGGING = {
         },
     },
     "root": {
-        "level": "INFO",
+        "level": DJANGO_LOG_LEVEL,
         "handlers": ["console"],
     },
     "loggers": {
-        "opencensus": {"handlers": ["console"], "level": DJANGO_LOG_LEVEL, "propagate": False},
         "django": {"handlers": ["console"], "level": DJANGO_LOG_LEVEL, "propagate": False},
         "django.utils.autoreload": {"handlers": ["console"], "level": "INFO", "propagate": False},
         "haal_centraal_proxy": {
@@ -197,54 +195,51 @@ if DEBUG:
     }
 
 # -- Azure specific settings
-
-if CLOUD_ENV.lower().startswith("azure"):
-    # Microsoft recommended abbreviation for Application Insights is `APPI`
-    AZURE_APPI_CONNECTION_STRING: str | None = env.str("AZURE_APPI_CONNECTION_STRING")
-    AZURE_APPI_AUDIT_CONNECTION_STRING: str | None = env.str("AZURE_APPI_AUDIT_CONNECTION_STRING")
+if CLOUD_ENV.startswith("azure"):
+    APPLICATIONINSIGHTS_CONNECTION_STRING = env.str("APPLICATIONINSIGHTS_CONNECTION_STRING")
+    APPLICATIONINSIGHTS_AUDIT_CONNECTION_STRING: str | None = env.str(
+        "APPLICATIONINSIGHTS_AUDIT_CONNECTION_STRING", None
+    )
     MAX_REPLICA_COUNT = env.int("MAX_REPLICA_COUNT", 5)
 
-    MIDDLEWARE.append("opencensus.ext.django.middleware.OpencensusMiddleware")
-    OPENCENSUS = {
-        "TRACE": {
-            "SAMPLER": "opencensus.trace.samplers.ProbabilitySampler(rate=1)",
-            "EXPORTER": f"""opencensus.ext.azure.trace_exporter.AzureExporter(
-                connection_string='{AZURE_APPI_CONNECTION_STRING}',
-                service_name='haal-centraal-proxy'
-            )""",  # noqa: E202
-            "EXCLUDELIST_PATHS": [],
-        }
-    }
-    config_integration.trace_integrations(["logging"])
+    from azure.monitor.opentelemetry import configure_azure_monitor
+    from opentelemetry.instrumentation.django import DjangoInstrumentor
+    from opentelemetry.sdk.resources import Resource
+    from opentelemetry.semconv.resource import ResourceAttributes
 
-    LOGGING["handlers"].update(
-        {
-            "azure": {
-                "level": "DEBUG",
-                "class": "opencensus.ext.azure.log_exporter.AzureLogHandler",
-                "connection_string": AZURE_APPI_CONNECTION_STRING,
-                "formatter": "json",
+    # Configure OpenTelemetry to use Azure Monitor with the specified connection string
+    if APPLICATIONINSIGHTS_CONNECTION_STRING is not None:
+        configure_azure_monitor(
+            connection_string=APPLICATIONINSIGHTS_CONNECTION_STRING,
+            logger_name="root",
+            instrumentation_options={
+                "azure_sdk": {"enabled": False},
+                "django": {"enabled": False},  # Manually done
+                "fastapi": {"enabled": False},
+                "flask": {"enabled": False},
+                "psycopg2": {"enabled": False},  # Manually done
+                "requests": {"enabled": True},
+                "urllib": {"enabled": True},
+                "urllib3": {"enabled": True},
             },
-            "audit_azure": {
-                "level": "DEBUG",
-                "class": "opencensus.ext.azure.log_exporter.AzureLogHandler",
-                "connection_string": AZURE_APPI_AUDIT_CONNECTION_STRING,
-                "formatter": "json_audit",
-            },
-        }
-    )
+            resource=Resource.create({ResourceAttributes.SERVICE_NAME: "haal-centraal-proxy"}),
+        )
+        print("OpenTelemetry has been enabled")
 
-    LOGGING["root"].update(
-        {
-            "handlers": ["azure"],
-            "level": DJANGO_LOG_LEVEL,
-        }
-    )
-    for logger_name, logger_details in LOGGING["loggers"].items():
-        if "audit_console" in logger_details["handlers"]:
-            LOGGING["loggers"][logger_name]["handlers"] = ["audit_azure", "console"]
-        else:
-            LOGGING["loggers"][logger_name]["handlers"] = ["azure", "console"]
+        def response_hook(span, request, response):
+            if (
+                span.is_recording()
+                and hasattr(request, "get_token_claims")
+                and (email := request.get_token_claims.get("email", request.get_token_subject))
+            ):
+                span.set_attribute("user.AuthenticatedId", email)
+
+        DjangoInstrumentor().instrument(response_hook=response_hook)
+        print("Django instrumentor enabled")
+
+        # Psycopg2Instrumentor().instrument(enable_commenter=True, commenter_options={})
+        # print("Psycopg instrumentor enabled")
+
 
 # -- Third party app settings
 
