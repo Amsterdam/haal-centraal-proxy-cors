@@ -14,6 +14,9 @@ STATUS_TO_URI = {
     status.HTTP_404_NOT_FOUND: "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.4",
     status.HTTP_405_METHOD_NOT_ALLOWED: "https://datatracker.ietf.org/doc/html/rfc7231#section-6.5.5",
     status.HTTP_500_INTERNAL_SERVER_ERROR: "https://datatracker.ietf.org/doc/html/rfc7231#section-6.6.1",
+    status.HTTP_502_BAD_GATEWAY: "https://datatracker.ietf.org/doc/html/rfc7231#section-6.6.3",
+    status.HTTP_503_SERVICE_UNAVAILABLE: "https://datatracker.ietf.org/doc/html/rfc7231#section-6.6.4",
+    status.HTTP_504_GATEWAY_TIMEOUT: "https://datatracker.ietf.org/doc/html/rfc7231#section-6.6.5",
 }
 
 
@@ -49,7 +52,7 @@ def exception_handler(exc, context):
         # Normalize the problem+json fields to be identical to how
         # our own API's would return these.
         normalized_fields = {
-            "type": STATUS_TO_URI[exc.status_code],
+            "type": STATUS_TO_URI.get(exc.status_code),
             "title": str(exc.title),
             "status": int(exc.status_code),
             "detail": str(exc.detail),
@@ -65,7 +68,7 @@ def exception_handler(exc, context):
         detail: ErrorDetail = response.data["detail"]
         default_detail = getattr(exc, "default_detail", None)
         response.data = {
-            "type": STATUS_TO_URI[exc.status_code],
+            "type": STATUS_TO_URI.get(exc.status_code),
             "code": detail.code,
             "title": default_detail if default_detail else str(exc),
             "detail": str(detail) if detail != default_detail else "",
@@ -99,7 +102,7 @@ def server_error(request, *args, **kwargs):
         )
 
     data = {
-        "type": STATUS_TO_URI[500],
+        "type": STATUS_TO_URI[status.HTTP_500_INTERNAL_SERVER_ERROR],
         "title": "Server Error (500)",
         "detail": "",
         "status": status.HTTP_500_INTERNAL_SERVER_ERROR,
