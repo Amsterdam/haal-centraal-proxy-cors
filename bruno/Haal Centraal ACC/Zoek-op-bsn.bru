@@ -1,0 +1,29 @@
+meta {
+  name: Zoek-op-bsn
+  type: http
+  seq: 2
+}
+
+post {
+  url: https://proefomgeving.haalcentraal.nl/haalcentraal/api/brp/personen
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json; charset=utf-8
+  X-API-Key: {{process.env.HAAL_CENTRAAL_API_KEY}}
+  Accept: application/json; charset=utf-8
+}
+
+body:json {
+  // client  --->  Haal Centraal ACC
+
+  {
+    "type": "RaadpleegMetBurgerservicenummer",
+    "gemeenteVanInschrijving": "0518",
+    "burgerservicenummer": ["555555021"],
+    "fields": ["aNummer","adressering","burgerservicenummer","datumEersteInschrijvingGBA","datumInschrijvingInGemeente","europeesKiesrecht","geboorte","gemeenteVanInschrijving","geslacht","gezag","immigratie","indicatieCurateleRegister","indicatieGezagMinderjarige","kinderen","leeftijd","naam","nationaliteiten","ouders","overlijden","partners","uitsluitingKiesrecht","verblijfplaats","verblijfstitel","verblijfplaatsBinnenland","adresseringBinnenland"]
+  }
+
+}
