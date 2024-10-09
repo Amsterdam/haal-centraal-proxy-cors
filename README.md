@@ -1,13 +1,15 @@
 # Haal Centraal API
 
 This is a proxy service to connect to the Haal Centraal API.
+It filters requests and enforces token-based authorization.
 
 # Reason
 
 Haal Centraal offers national services for accessing government data.
 These services are designed to support broad access, and don't offer much refined authorization policies.
 Such feature has to be implemented by each municipality that implements the API.
-This service does this based on policy files defined in "Amsterdam Schema".
+
+This service does this based on policy files (tbd, but likely in "Amsterdam Schema").
 
 # Installation
 
@@ -34,6 +36,9 @@ Example request (directly to the Haal Centraal Mock API):
 And the same can be repeated on the Django instance if you pass a token:
 
     curl -X POST http://localhost:8000/api/brp/personen -H 'Content-Type: application/json' -H "Authorization: Bearer $(./get-token.py BRP/RO BRP/zoek-postcode)" -d '{"type": "ZoekMetPostcodeEnHuisnummer", "postcode": "1074VE", "huisnummer": 1, "fields": ["naam"]}'
+
+The *type* and *fields* are required for all request types.
+All possible parameters are documented in the [Haal Centraal documentation](https://brp-api.github.io/Haal-Centraal-BRP-bevragen/).
 
 ## Using Local Python
 
