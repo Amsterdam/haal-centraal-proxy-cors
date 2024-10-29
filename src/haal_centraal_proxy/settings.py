@@ -197,22 +197,19 @@ if DEBUG:
 
 # -- Azure specific settings
 if CLOUD_ENV.startswith("azure"):
-    # Microsoft recommended abbreviation for Application Insights is `APPI`
-    APPLICATIONINSIGHTS_CONNECTION_STRING = env.str("APPLICATIONINSIGHTS_CONNECTION_STRING")
-    APPLICATIONINSIGHTS_AUDIT_CONNECTION_STRING: str | None = env.str(
-        "APPLICATIONINSIGHTS_AUDIT_CONNECTION_STRING", None
-    )
-    MAX_REPLICA_COUNT = env.int("MAX_REPLICA_COUNT", 5)
-
     from azure.monitor.opentelemetry import configure_azure_monitor
     from opentelemetry.instrumentation.django import DjangoInstrumentor
     from opentelemetry.sdk.resources import Resource
     from opentelemetry.semconv.resource import ResourceAttributes
 
+    # Microsoft recommended abbreviation for Application Insights is `APPI`
+    AZURE_APPI_CONNECTION_STRING = env.str("AZURE_APPI_CONNECTION_STRING")
+    AZURE_APPI_AUDIT_CONNECTION_STRING = env.str("AZURE_APPI_AUDIT_CONNECTION_STRING", None)
+
     # Configure OpenTelemetry to use Azure Monitor with the specified connection string
-    if APPLICATIONINSIGHTS_CONNECTION_STRING is not None:
+    if AZURE_APPI_CONNECTION_STRING is not None:
         configure_azure_monitor(
-            connection_string=APPLICATIONINSIGHTS_CONNECTION_STRING,
+            connection_string=AZURE_APPI_CONNECTION_STRING,
             logger_name="root",
             instrumentation_options={
                 "azure_sdk": {"enabled": False},
@@ -242,7 +239,7 @@ if CLOUD_ENV.startswith("azure"):
         # Psycopg2Instrumentor().instrument(enable_commenter=True, commenter_options={})
         # print("Psycopg instrumentor enabled")
 
-    if APPLICATIONINSIGHTS_AUDIT_CONNECTION_STRING is not None:
+    if AZURE_APPI_AUDIT_CONNECTION_STRING is not None:
         # Configure audit logging to an extra log
         from azure.monitor.opentelemetry.exporter import AzureMonitorLogExporter
         from opentelemetry.sdk._logs import LoggerProvider
@@ -252,7 +249,7 @@ if CLOUD_ENV.startswith("azure"):
         audit_logger_provider.add_log_record_processor(
             BatchLogRecordProcessor(
                 AzureMonitorLogExporter(
-                    connection_string=APPLICATIONINSIGHTS_AUDIT_CONNECTION_STRING
+                    connection_string=AZURE_APPI_AUDIT_CONNECTION_STRING
                 )
             )
         )
@@ -268,6 +265,7 @@ if CLOUD_ENV.startswith("azure"):
         for logger_name, logger_details in LOGGING["loggers"].items():
             if "audit_console" in logger_details["handlers"]:
                 LOGGING["loggers"][logger_name]["handlers"] = ["audit_console", "console"]
+        print("Audit logging has been enabled")
 
 
 # -- Third party app settings
