@@ -5,13 +5,13 @@ pur == 7.3.2
 pip-tools==7.4.1
 
 # Linting
-pre-commit==3.8.0
-black==24.8.0
-ruff==0.6.1
+pre-commit==4.0.1
+black==24.10.0
+ruff==0.7.1
 
 # Testing
 pytest-sugar==1.0.0
-termcolor==2.4.0
+termcolor==2.5.0
 
 # Debugging
 django-debug-toolbar==4.4.6
