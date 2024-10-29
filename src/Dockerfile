@@ -33,6 +33,7 @@ ENV DJANGO_SETTINGS_MODULE=haal_centraal_proxy.settings \
     UWSGI_MODULE=haal_centraal_proxy.wsgi \
     UWSGI_CALLABLE=application \
     UWSGI_MASTER=1
+RUN pip install setuptools  # workaround for missing pkg_resources in opentelemetry
 RUN python manage.py collectstatic --noinput
 
 EXPOSE 8000
