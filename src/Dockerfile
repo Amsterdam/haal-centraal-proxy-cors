@@ -26,7 +26,13 @@ COPY --from=builder /usr/local/lib/python3.12/site-packages/ /usr/local/lib/pyth
 WORKDIR /app
 COPY . ./
 
-ENV DJANGO_SETTINGS_MODULE=haal_centraal_proxy.settings DJANGO_DEBUG=false
+# Have some defaults so the container is easier to start
+ENV DJANGO_SETTINGS_MODULE=haal_centraal_proxy.settings \
+    DJANGO_DEBUG=false \
+    UWSGI_HTTP_SOCKET=:8000 \
+    UWSGI_MODULE=haal_centraal_proxy.wsgi \
+    UWSGI_CALLABLE=application \
+    UWSGI_MASTER=1
 RUN python manage.py collectstatic --noinput
 
 EXPOSE 8000

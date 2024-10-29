@@ -23,10 +23,6 @@ services:
     depends_on:
       - personen-mock
     environment:
-      UWSGI_HTTP_SOCKET: ":8000"
-      UWSGI_MODULE: "haal_centraal_proxy.wsgi"
-      UWSGI_CALLABLE: "application"
-      UWSGI_MASTER: 1
       UWSGI_STATIC_MAP: "/haal_centraal_proxy/static=/static"
       SECRET_KEY: insecure
       #DATABASE_URL: "${DATABASE_URL:-postgresql://postgres:insecure@database/dataservices}"
