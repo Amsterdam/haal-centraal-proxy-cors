@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 ParameterPolicy = permissions.ParameterPolicy  # shortcut
 
 GEMEENTE_AMSTERDAM_CODE = "0363"
-ALLOW_PARAMETER = ParameterPolicy(default_scope=set())
 ALLOW_VALUE = set()  # no scopes
 SCOPE_NATIONWIDE = {"BRP/buiten-gemeente"}
 
@@ -205,18 +204,20 @@ class HaalCentraalBRP(BaseProxyView):
         # All possible search parameters are named here,
         # to avoid passing through a flag that allows more access.
         # See: https://brp-api.github.io/Haal-Centraal-BRP-bevragen/v2/redoc#tag/Personen/operation/Personen
-        "geboortedatum": ALLOW_PARAMETER,
-        "geslachtsnaam": ALLOW_PARAMETER,
-        "geslacht": ALLOW_PARAMETER,
-        "voorvoegsel": ALLOW_PARAMETER,
-        "voornamen": ALLOW_PARAMETER,
-        "straat": ALLOW_PARAMETER,
-        "huisletter": ALLOW_PARAMETER,
-        "huisnummer": ALLOW_PARAMETER,
-        "huisnummertoevoeging": ALLOW_PARAMETER,
-        "postcode": ALLOW_PARAMETER,
-        "nummeraanduidingIdentificatie": ALLOW_PARAMETER,
-        "adresseerbaarObjectIdentificatie": ALLOW_PARAMETER,
+        "geboortedatum": ParameterPolicy.allow_all,
+        "geslachtsnaam": ParameterPolicy.allow_all,
+        "geslacht": ParameterPolicy.allow_all,
+        "voorvoegsel": ParameterPolicy.allow_all,
+        "voornamen": ParameterPolicy.allow_all,
+        "straat": ParameterPolicy.allow_all,
+        "huisletter": ParameterPolicy.allow_all,
+        "huisnummer": ParameterPolicy.allow_all,
+        "huisnummertoevoeging": ParameterPolicy.allow_all,
+        "postcode": ParameterPolicy.allow_all,
+        "nummeraanduidingIdentificatie": ParameterPolicy.allow_all,
+        "adresseerbaarObjectIdentificatie": ParameterPolicy.allow_all,
+        "verblijfplaats": ParameterPolicy.for_all_values({"BRP/in-buitenland"}),
+        "burgerservicenummer": ParameterPolicy.for_all_values({"BRP/zoek-bsn"}),
         "inclusiefOverledenPersonen": ParameterPolicy(
             scopes_for_values={
                 "true": {"BRP/in-overl"},
@@ -227,8 +228,6 @@ class HaalCentraalBRP(BaseProxyView):
             {GEMEENTE_AMSTERDAM_CODE: ALLOW_VALUE},  # ok to include ?gemeenteVanInschrijving=0363
             default_scope=SCOPE_NATIONWIDE,
         ),
-        "verblijfplaats": ParameterPolicy(default_scope={"BRP/in-buitenland"}),
-        "burgerservicenummer": ParameterPolicy(default_scope={"BRP/zoek-bsn"}),
     }
 
     def transform_request(self, hc_request: dict, user_scopes: set) -> None:

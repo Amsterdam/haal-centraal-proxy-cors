@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 import logging
 import re
 from dataclasses import dataclass, field
 from functools import cached_property
+from typing import ClassVar
 
 from rest_framework import status
 from rest_framework.permissions import BasePermission
@@ -13,12 +16,38 @@ audit_log = logging.getLogger("haal_centraal_proxy.audit")
 
 @dataclass
 class ParameterPolicy:
-    """A rule for which parameter values are allowed"""
+    """A rule for which parameter values are allowed.
+
+    Each combination of a parameter-value can require a specific role.
+    When the `set` object is left empty, it's treated as not requiring any scope.
+
+    This allows to code the following variations:
+
+    * Allow the parameter, and ALL values:
+      ``ParameterPolicy(default_scope=set())`` (shorthand: ``ParameterPolicy.allow_all``).
+    * Require that certain scopes are fulfilled:
+      ``ParameterPolicy(default_scope={"required-scope", "scope2"})`` (shorthand:
+      ``ParameterPolicy.for_all_values(...)``).
+    * Require a scope to allow certain values:
+      ``ParameterPolicy(scopes_for_values={"value1": {"required-scope", ...}, "value2": ...)``.
+    * Require a scope, but allow a wildcard fallback:
+      ``ParameterPolicy(scopes_for_values=..., default_scope=...)``
+    """
+
+    #: Singleton for convenience, to mark that the parameter is always allowed.
+    #: This is the same as using `default_scope=set()`.
+    allow_all: ClassVar[ParameterPolicy]
 
     #: A specific scope for each value.
     scopes_for_values: dict[str | None, set[str]] = field(default_factory=dict)
+
     #: A default scope in case the value is missing in the :attr:`scopes_for_values`.
     default_scope: set[str] | None = None
+
+    @classmethod
+    def for_all_values(cls, scopes_for_all_values: set[str]):
+        """A configuration shorthand, to require a specific scope for all incoming values."""
+        return cls(default_scope=scopes_for_all_values)
 
     def get_needed_scopes(self, value) -> set[str]:
         """Return which scopes are required for a given parameter value."""
@@ -41,6 +70,9 @@ class ParameterPolicy:
             for key, roles in self.scopes_for_values.items()
             if key.endswith("*")
         ]
+
+
+ParameterPolicy.allow_all = ParameterPolicy(default_scope=set())
 
 
 def validate_parameters(ruleset: dict[str, ParameterPolicy], hc_request, user_scopes: set[str]):
@@ -89,7 +121,9 @@ def validate_parameters(ruleset: dict[str, ParameterPolicy], hc_request, user_sc
     )
 
 
-def _check_parameter_values(policy: ParameterPolicy, field_name, values, user_scopes):
+def _check_parameter_values(
+    policy: ParameterPolicy, field_name: str, values: list | str, user_scopes: set[str]
+):
     """Check whether the given parameter values are allowed."""
     is_multiple = isinstance(values, list)
     if not is_multiple:
