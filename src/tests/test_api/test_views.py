@@ -1,5 +1,6 @@
 import orjson
 from django.urls import reverse
+from haal_centraal_proxy.api import views
 
 from tests.utils import build_jwt_token
 
@@ -22,7 +23,9 @@ RESPONSE_POSTCODE_HUISNUMMER = {
 }
 
 
-class TestViews:
+class TestHaalCentraalBRP:
+    """Prove that the BRP view works as advertised."""
+
     def test_bsn_search_no_login(self, api_client, caplog):
         """Prove that accessing the view fails without a login token."""
         url = reverse("brp-personen")
@@ -99,4 +102,14 @@ class TestViews:
             "detail": "401 from remote: Niet correct geauthenticeerd.",
             "code": "permission_denied",
             "instance": "/api/brp/personen",
+        }
+
+    def test_add_gemeente_filter(self):
+        """Prove that gemeente-filter is added."""
+        view = views.HaalCentraalBRP()
+        hc_request = {"type": "RaadpleegMetBurgerservicenummer"}
+        view.transform_request(hc_request, user_scopes={"BRP/zoek-bsn"})
+        assert hc_request == {
+            "type": "RaadpleegMetBurgerservicenummer",
+            "gemeenteVanInschrijving": "0363",
         }
