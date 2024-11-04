@@ -248,9 +248,7 @@ if CLOUD_ENV.startswith("azure"):
         audit_logger_provider = LoggerProvider()
         audit_logger_provider.add_log_record_processor(
             BatchLogRecordProcessor(
-                AzureMonitorLogExporter(
-                    connection_string=AZURE_APPI_AUDIT_CONNECTION_STRING
-                )
+                AzureMonitorLogExporter(connection_string=AZURE_APPI_AUDIT_CONNECTION_STRING)
             )
         )
 
