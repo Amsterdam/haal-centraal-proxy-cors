@@ -106,7 +106,7 @@ class TestHaalCentraalBRP:
 
     def test_add_gemeente_filter(self):
         """Prove that gemeente-filter is added."""
-        view = views.HaalCentraalBRP()
+        view = views.BrpPersonenView()
         hc_request = {"type": "RaadpleegMetBurgerservicenummer"}
         view.transform_request(hc_request, user_scopes={"BRP/zoek-bsn"})
         assert hc_request == {
