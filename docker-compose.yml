@@ -2,14 +2,24 @@ services:
   personen-mock:
     # from https://github.com/BRP-API/Haal-Centraal-BRP-bevragen/blob/master/docker-compose-mock.yml
     container_name: personen-mock
-    image: ghcr.io/brp-api/personen-mock:2.2.1-latest
+    image: ghcr.io/brp-api/personen-mock:2.3.0-latest
     environment:
       - ASPNETCORE_ENVIRONMENT=Release
       - ASPNETCORE_URLS=http://+:5010
+    networks:
+      - brp-api-network
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx
     ports:
-      - "5010:5010"
-    # volumes:
-    #   - ./src/config/BrpService:/app/Data
+      - "5010:80"  # Expose NGINX on port 5010
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf  # Link to the NGINX config file
+    depends_on:
+      - personen-mock
+    networks:
+      - brp-api-network
 
   web:
     build:
@@ -23,18 +33,20 @@ services:
     depends_on:
       - personen-mock
     environment:
+      UWSGI_HTTP_SOCKET: ":8000"
+      UWSGI_MODULE: "haal_centraal_proxy.wsgi"
+      UWSGI_CALLABLE: "application"
+      UWSGI_MASTER: 1
       UWSGI_STATIC_MAP: "/haal_centraal_proxy/static=/static"
       SECRET_KEY: insecure
-      #DATABASE_URL: "${DATABASE_URL:-postgresql://postgres:insecure@database/dataservices}"
       DJANGO_LOG_LEVEL: "${DJANGO_LOG_LEVEL:-INFO}"
-      HAAL_CENTRAAL_BRP_URL: "http://localhost:5010/haalcentraal/api/brp/personen"
+      HAAL_CENTRAAL_BRP_URL: "http://nginx/haalcentraal/api/brp/personen"  # Update to use NGINX proxy
       LOG_LEVEL: "${LOG_LEVEL:-INFO}"
       AUDIT_LOG_LEVEL: "${AUDIT_LOG_LEVEL:-INFO}"
       AZURE_APPI_AUDIT_CONNECTION_STRING: "${AZURE_APPI_AUDIT_CONNECTION_STRING}"
       AZURE_APPI_CONNECTION_STRING: "${AZURE_APPI_CONNECTION_STRING}"
       OAUTH_CLIENT_ID: "${OAUTH_CLIENT_ID}"
       OAUTH_JWKS_URL: "${OAUTH_JWKS_URL}"
-      # Generated using: jq -c < src/jwks_test.json
       PUB_JWKS: '{"keys":[{"kty":"EC","key_ops":["verify","sign"],"kid":"2aedafba-8170-4064-b704-ce92b7c89cc6","crv":"P-256","x":"6r8PYwqfZbq_QzoMA4tzJJsYUIIXdeyPA27qTgEJCDw=","y":"Cf2clfAfFuuCB06NMfIat9ultkMyrMQO9Hd2H7O9ZVE=","d":"N1vu0UQUp0vLfaNeM0EDbl4quvvL6m_ltjoAXXzkI3U="}]}'
       OAUTH_URL:  "${OAUTH_URL}"
       CLOUD_ENV: "${CLOUD_ENV}"
@@ -43,3 +55,9 @@ services:
     volumes:
       - ./src:/app
     command: uwsgi --py-auto-reload=1 --enable-threads --lazy-apps --buffer-size=65535
+    networks:
+      - brp-api-network
+
+networks:
+  brp-api-network:
+    name: brp-api-network

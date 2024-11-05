@@ -5,6 +5,7 @@ from django.views import View
 from rest_framework import status
 from rest_framework.exceptions import APIException, ErrorDetail
 from rest_framework.views import exception_handler as drf_exception_handler
+import subprocess
 
 from haal_centraal_proxy.api.exceptions import ProblemJsonException
 
@@ -137,3 +138,12 @@ def not_found(request, exception, *args, **kwargs):
         "instance": _get_unique_trace_id(request),
     }
     return JsonResponse(data, status=status.HTTP_404_NOT_FOUND)
+
+
+def get_token(request):
+    try:
+        # Run the get-token.py script and capture the output
+        token = subprocess.check_output(["python3", "./get-token.py", "BRP/RO", "BRP/zoek-postcode"])
+        return JsonResponse({"token": token.decode("utf-8").strip()})
+    except subprocess.CalledProcessError as e:
+        return JsonResponse({"error": "Failed to retrieve token"}, status=500)

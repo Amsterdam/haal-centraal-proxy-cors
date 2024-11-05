@@ -48,6 +48,12 @@ MIDDLEWARE = [
     "authorization_django.authorization_middleware",
 ]
 
+CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",  
+]
+
 if DEBUG:
     INSTALLED_APPS += [
         "debug_toolbar",
@@ -155,7 +161,6 @@ LOGGING = {
             "class": "logging.StreamHandler",
         },
         "audit_console": {
-            # For azure, this is replaced below.
             "level": "DEBUG",
             "class": "logging.StreamHandler",
             "formatter": "audit_json",
@@ -197,19 +202,21 @@ if DEBUG:
 
 # -- Azure specific settings
 if CLOUD_ENV.startswith("azure"):
+    APPLICATIONINSIGHTS_CONNECTION_STRING = env.str("APPLICATIONINSIGHTS_CONNECTION_STRING")
+    APPLICATIONINSIGHTS_AUDIT_CONNECTION_STRING: str | None = env.str(
+        "APPLICATIONINSIGHTS_AUDIT_CONNECTION_STRING", None
+    )
+    MAX_REPLICA_COUNT = env.int("MAX_REPLICA_COUNT", 5)
+
     from azure.monitor.opentelemetry import configure_azure_monitor
     from opentelemetry.instrumentation.django import DjangoInstrumentor
     from opentelemetry.sdk.resources import Resource
     from opentelemetry.semconv.resource import ResourceAttributes
 
-    # Microsoft recommended abbreviation for Application Insights is `APPI`
-    AZURE_APPI_CONNECTION_STRING = env.str("AZURE_APPI_CONNECTION_STRING")
-    AZURE_APPI_AUDIT_CONNECTION_STRING = env.str("AZURE_APPI_AUDIT_CONNECTION_STRING", None)
-
     # Configure OpenTelemetry to use Azure Monitor with the specified connection string
-    if AZURE_APPI_CONNECTION_STRING is not None:
+    if APPLICATIONINSIGHTS_CONNECTION_STRING is not None:
         configure_azure_monitor(
-            connection_string=AZURE_APPI_CONNECTION_STRING,
+            connection_string=APPLICATIONINSIGHTS_CONNECTION_STRING,
             logger_name="root",
             instrumentation_options={
                 "azure_sdk": {"enabled": False},
@@ -238,32 +245,6 @@ if CLOUD_ENV.startswith("azure"):
 
         # Psycopg2Instrumentor().instrument(enable_commenter=True, commenter_options={})
         # print("Psycopg instrumentor enabled")
-
-    if AZURE_APPI_AUDIT_CONNECTION_STRING is not None:
-        # Configure audit logging to an extra log
-        from azure.monitor.opentelemetry.exporter import AzureMonitorLogExporter
-        from opentelemetry.sdk._logs import LoggerProvider
-        from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
-
-        audit_logger_provider = LoggerProvider()
-        audit_logger_provider.add_log_record_processor(
-            BatchLogRecordProcessor(
-                AzureMonitorLogExporter(connection_string=AZURE_APPI_AUDIT_CONNECTION_STRING)
-            )
-        )
-
-        # Attach LoggingHandler to namespaced logger
-        # same as: handler = LoggingHandler(logger_provider=audit_logger_provider)
-        LOGGING["handlers"]["audit_console"] = {
-            "level": "DEBUG",
-            "class": "opentelemetry.sdk._logs.LoggingHandler",
-            "logger_provider": audit_logger_provider,
-            "formatter": "audit_json",
-        }
-        for logger_name, logger_details in LOGGING["loggers"].items():
-            if "audit_console" in logger_details["handlers"]:
-                LOGGING["loggers"][logger_name]["handlers"] = ["audit_console", "console"]
-        print("Audit logging has been enabled")
 
 
 # -- Third party app settings
@@ -306,21 +287,6 @@ HAAL_CENTRAAL_KEY_FILE = env.str("HAAL_CENTRAAL_KEY_FILE", None)
 HAAL_CENTRAAL_CERT_FILE = env.str("HAAL_CENTRAAL_CERT_FILE", None)
 
 HAAL_CENTRAAL_BRP_URL = env.str(
-    "HAAL_CENTRAAL_BRP_PERSONEN_URL",
-    default=env.str(
-        "HAAL_CENTRAAL_BRP_URL",  # Allow old name too.
-        "https://proefomgeving.haalcentraal.nl/haalcentraal/api/brp/personen",
-    ),
-)
-HAAL_CENTRAAL_BRP_BEWONINGEN_URL = env.str(
-    "HAAL_CENTRAAL_BRP_BEWONINGEN_URL",
-    "https://demo-omgeving.haalcentraal.nl/haalcentraal/api/bewoning/bewoningen",
-)
-HAAL_CENTRAAL_BRP_VERBLIJFSPLAATS_HISTORIE_URL = env.str(
-    "HAAL_CENTRAAL_BRP_VERBLIJFSPLAATS_HISTORIE_URL",
-    "https://demo-omgeving.haalcentraal.nl/haalcentraal/api/brphistorie/verblijfplaatshistorie",
-)
-HAAL_CENTRAAL_REISDOCUMENTEN_URL = env.str(
-    "HAAL_CENTRAAL_REISDOCUMENTEN_URL",
-    "https://proefomgeving.haalcentraal.nl/haalcentraal/api/reisdocumenten/reisdocumenten",
+    "HAAL_CENTRAAL_BRP_URL",
+    "https://proefomgeving.haalcentraal.nl/haalcentraal/api/brp/personen",
 )
